@@ -178,12 +178,15 @@ class TopologyManager:
         # ---------------------- TOPOLOGÍA LINEAL ----------------------
         if topo_type == "lineal":
             print("\nConfigurando topología LINEAL...")
-            for i in range(len(self.vm_inventory) - 1):
-                vm_a = self.vm_inventory[i]
-                vm_b = self.vm_inventory[i + 1]
+            vms_sorted = sorted(self.vm_inventory, key=lambda v: v["name"])
+            vlan_id = self.next_vlan_id
 
-                tap_a = f"br-int-{vm_a['name']}-tap{min(i + 1, 1)}"
-                tap_b = f"br-int-{vm_b['name']}-tap{min(i + 1, 1)}"
+            for i in range(len(vms_sorted) - 1):
+                vm_a = vms_sorted[i]
+                vm_b = vms_sorted[i + 1]
+
+                tap_a = f"br-int-{vm_a['name']}-tap{2 if i > 0 else 1}"
+                tap_b = f"br-int-{vm_b['name']}-tap{1 if (i + 1) < len(vms_sorted) - 1 else 1}"
 
                 print(f"  VLAN {vlan_id}: {vm_a['name']}({tap_a}) <-> {vm_b['name']}({tap_b})")
 
@@ -193,6 +196,7 @@ class TopologyManager:
                     if conn.connect():
                         conn.exec_sudo(f"ovs-vsctl set port {tap_name} tag={vlan_id}")
                         conn.close()
+
                 vlan_id += 100
 
         # ---------------------- TOPOLOGÍA ANILLO ----------------------
@@ -211,7 +215,7 @@ class TopologyManager:
                 print(f"  VLAN {vlan_id}: {vm_a['name']}({tap_a}) <-> {vm_b['name']}({tap_b})")
 
                 for vm, tap_name in ((vm_a, tap_a), (vm_b, tap_b)):
-                    conn = SSHConnection(vm["ip"], vm["ssh_port"], self.ssh_user, self.ssh_pass)
+                    conn = SSHConnection(gateway_ip, vm["ssh_port"], self.ssh_user, self.ssh_pass)
                     _ensure_tap_exists(conn, vm, tap_name)
                     if conn.connect():
                         conn.exec_sudo(f"ovs-vsctl set port {tap_name} tag={vlan_id}")

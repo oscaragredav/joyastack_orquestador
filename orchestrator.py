@@ -16,7 +16,7 @@ def main():
     print("=== Orquestador Cloud ===")
     user = input("Usuario SSH: ")
     passwd = getpass.getpass("Contraseña SSH: ")
-    gateway_ip = input("IP del Gateway: ")
+    gateway_ip = input("IP del Gateway: ")  # 10.20.12.28
 
     worker_mgr = WorkerManager(WORKERS, gateway_ip, user, passwd)
 
@@ -41,7 +41,7 @@ def main():
                 num_vms = int(input("¿Cuántas VMs deseas crear?: "))
                 worker_mgr.create_vms(num_vms)
             case "3":
-                topo_mgr = TopologyManager(worker_mgr.vm_inventory)
+                topo_mgr = TopologyManager(worker_mgr.vm_inventory, gateway_ip, user, passwd)
                 topo_mgr.define_topology()
             case "4":
                 worker_mgr.list_vms()
@@ -62,24 +62,25 @@ def main():
             case _:
                 print("Opción inválida")
 
+
 # Alternativa sin usar match-case (Python < 3.10), comentado por si acaso!
-        # if option == "1":
-        #     print("Inicialización de Workers (solo para ejemplo)")
-        # elif option == "2":
-        #     num_vms = int(input("¿Cuántas VMs deseas crear?: "))
-        #     worker_mgr.create_vms(num_vms)
-        # elif option == "3":
-        #     topo_mgr = TopologyManager(worker_mgr.vm_inventory)
-        #     topo_mgr.define_topology()
-        # elif option == "4":
-        #     worker_mgr.list_vms()
-        # elif option == "5":
-        #     worker_mgr.reset_cluster()
-        # elif option == "6":
-        #     print("Saliendo...")
-        #     sys.exit(0)
-        # else:
-        #     print("Opción inválida")
+# if option == "1":
+#     print("Inicialización de Workers (solo para ejemplo)")
+# elif option == "2":
+#     num_vms = int(input("¿Cuántas VMs deseas crear?: "))
+#     worker_mgr.create_vms(num_vms)
+# elif option == "3":
+#     topo_mgr = TopologyManager(worker_mgr.vm_inventory)
+#     topo_mgr.define_topology()
+# elif option == "4":
+#     worker_mgr.list_vms()
+# elif option == "5":
+#     worker_mgr.reset_cluster()
+# elif option == "6":
+#     print("Saliendo...")
+#     sys.exit(0)
+# else:
+#     print("Opción inválida")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ class WorkerManager:
             cpus = int(input("   CPUs: "))
             ram = int(input("   RAM (MB): "))
             disk = int(input("   Disco (GB): "))
-            vlan = int(input("   VLAN ID: "))
+            # vlan = int(input("   VLAN ID: "))
 
             vnc_port = vm_id  # VNC único
             mac_suffix = f"{random.randint(0, 255):02x}"  # Sufijo de MAC único para evitar conflictos
@@ -40,7 +40,7 @@ class WorkerManager:
                 "cpus": cpus,
                 "ram": ram,
                 "disk": disk,
-                "vlan": vlan,
+                "vlan": None,
                 "tap": tap_name,
                 "vnc_port": vnc_port,
                 "mac": f"20:19:37:33:ee:{mac_suffix}",  # OJO: acá la MAC empieza con mi código :V
@@ -59,7 +59,7 @@ class WorkerManager:
             sftp.close()
 
             cmd = (
-                f"/tmp/vm_create.sh {vm_info['name']} br-int {vlan} {vnc_port} "
+                f"/tmp/vm_create.sh {vm_info['name']} br-int 0 {vnc_port} "
                 f"{vm_info['cpus']} {vm_info['ram']} {vm_info['disk']}"
             )
             print(f"Ejecutando en {w_name}: {cmd}")

@@ -37,6 +37,30 @@ def create_linear(nodes):
     draw_topology(topology, "Topología Lineal")
 
 
+def create_bus(nodes):
+    topology = nx.complete_graph(nodes)
+    draw_topology(topology, "Topología Bus")
+
+
+def _ensure_tap_exists(conn, vm, tap_name):
+    # conn = SSHConnection(vm["ip"], vm["ssh_port"], self.ssh_user, self.ssh_pass)
+    if not conn.connect():
+        print(f"No se pudo conectar a {vm['name']}")
+        return
+
+    out, err = conn.exec_command(f"ip link show {tap_name}")
+    if "does not exist" in err or not out.strip():
+        print(f"Creando interfaz TAP faltante {tap_name} en {vm['name']}")
+        conn.exec_sudo(f"ip tuntap add mode tap name {tap_name}")
+        conn.exec_sudo(f"ip link set dev {tap_name} up")
+        conn.exec_sudo(f"ovs-vsctl add-port br-int {tap_name}")
+        print(f"{tap_name} creada y conectada a br-int")
+    else:
+        print(f"{tap_name} ya existe en {vm['name']}")
+
+    conn.close()
+
+
 class TopologyManager:
     def __init__(self, vm_inventory, gateway_ip, ssh_user, ssh_pass):
         self.vm_inventory = vm_inventory
@@ -73,7 +97,6 @@ class TopologyManager:
 
                 topology = nx.compose(topology, sub_g)
 
-                # Aplica la configuración para el subconjunto de VMs
                 subset_inventory = [
                     vm for vm in self.vm_inventory if vm["name"] in vm_list
                 ]
@@ -119,17 +142,18 @@ class TopologyManager:
                 self.apply_vlan_topology("arbol", self.gateway_ip, self.ssh_user, self.ssh_pass)
                 create_tree(vm_names)
             elif option == "4":
+                self.apply_vlan_topology("bus", self.gateway_ip, self.ssh_user, self.ssh_pass)
+
+            elif option == "5":
                 self.create_composite()
             else:
                 print("Opción inválida")
         except Exception as e:
             print(f"Error definiendo topología: {e}")
 
-    def apply_vlan_topology(
-            self, topo_type, gateway_ip, ssh_user, ssh_pass
-    ):
+    def apply_vlan_topology(self, topo_type, gateway_ip, ssh_user, ssh_pass):
         """
-        Aplica una topología real en los bridges OvS de los workers mediante VLAN.
+        Se aplica una topología real en los bridges OvS de los workers mediante VLAN.
         Topo_type: 'lineal' | 'anillo' | 'bus'
         """
 
@@ -158,35 +182,41 @@ class TopologyManager:
                 vm_a = self.vm_inventory[i]
                 vm_b = self.vm_inventory[i + 1]
 
-                print(f"  VLAN {vlan_id}: {vm_a['name']} <-> {vm_b['name']}")
-                for vm in (vm_a, vm_b):
-                    conn = SSHConnection(
-                        gateway_ip, vm["ssh_port"], ssh_user, ssh_pass
-                    )
+                tap_a = f"br-int-{vm_a['name']}-tap{min(i + 1, 1)}"
+                tap_b = f"br-int-{vm_b['name']}-tap{min(i + 1, 1)}"
+
+                print(f"  VLAN {vlan_id}: {vm_a['name']}({tap_a}) <-> {vm_b['name']}({tap_b})")
+
+                for vm, tap_name in ((vm_a, tap_a), (vm_b, tap_b)):
+                    conn = SSHConnection(gateway_ip, vm["ssh_port"], self.ssh_user, self.ssh_pass)
+                    _ensure_tap_exists(conn, vm, tap_name)
                     if conn.connect():
-                        conn.exec_sudo(
-                            f"ovs-vsctl set port {vm['tap']} tag={vlan_id}"
-                        )
+                        conn.exec_sudo(f"ovs-vsctl set port {tap_name} tag={vlan_id}")
                         conn.close()
                 vlan_id += 100
 
         # ---------------------- TOPOLOGÍA ANILLO ----------------------
         elif topo_type == "anillo":
-            print("\nConfigurando topología ANILLO...")
-            n = len(self.vm_inventory)
+            print("\nConfigurando topología ANILLO (multi‑interfaz)...")
+            vms_sorted = sorted(self.vm_inventory, key=lambda v: v["name"])
+            n = len(vms_sorted)
+
             for i in range(n):
-                vm_a = self.vm_inventory[i]
-                vm_b = self.vm_inventory[(i + 1) % n]  # Siguiente, o vuelve al inicio
-                print(f"  VLAN {vlan_id}: {vm_a['name']} <-> {vm_b['name']}")
-                for vm in (vm_a, vm_b):
-                    conn = SSHConnection(
-                        gateway_ip, vm["ssh_port"], ssh_user, ssh_pass
-                    )
+                vm_a = vms_sorted[i]
+                vm_b = vms_sorted[(i + 1) % n]  # paso circular
+
+                tap_a = f"br-int-{vm_a['name']}-tap{min(2, i + 1)}"
+                tap_b = f"br-int-{vm_b['name']}-tap{1 if (i + 1) == n else min(2, i + 1)}"
+
+                print(f"  VLAN {vlan_id}: {vm_a['name']}({tap_a}) <-> {vm_b['name']}({tap_b})")
+
+                for vm, tap_name in ((vm_a, tap_a), (vm_b, tap_b)):
+                    conn = SSHConnection(vm["ip"], vm["ssh_port"], self.ssh_user, self.ssh_pass)
+                    _ensure_tap_exists(conn, vm, tap_name)
                     if conn.connect():
-                        conn.exec_sudo(
-                            f"ovs-vsctl set port {vm['tap']} tag={vlan_id}"
-                        )
+                        conn.exec_sudo(f"ovs-vsctl set port {tap_name} tag={vlan_id}")
                         conn.close()
+
                 vlan_id += 100
 
         # ---------------------- TOPOLOGÍA BUS ----------------------

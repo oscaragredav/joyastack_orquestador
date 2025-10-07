@@ -58,9 +58,11 @@ class WorkerManager:
             sftp.chmod("/tmp/vm_create.sh", 0o755)
             sftp.close()
 
+            # Número de interfaces para la VM (por ahora 1, se ampliará en topología)
+            num_ifaces = 1
             cmd = (
                 f"/tmp/vm_create.sh {vm_info['name']} br-int 0 {vnc_port} "
-                f"{vm_info['cpus']} {vm_info['ram']} {vm_info['disk']}"
+                f"{vm_info['cpus']} {vm_info['ram']} {vm_info['disk']} {num_ifaces}"
             )
             print(f"Ejecutando en {w_name}: {cmd}")
             out, err = ssh.exec_sudo(cmd)

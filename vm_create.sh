@@ -12,10 +12,10 @@
 #  $7 = Disco GB
 
 # Validar parámetros
-if [ $# -ne 7 ]; then
+if [ $# -ne 8 ]; then
     echo "Error: Número incorrecto de parámetros."
-    echo "Uso: $0 <NombreVM> <OvS> <VLAN> <VNC_PORT> <CPUs> <RAM_MB> <DISK_GB>"
-    echo "Ejemplo: $0 VM1 br-int 100 1 1 256 1"
+    echo "Uso: $0 <NombreVM> <OvS> <VLAN> <VNC_PORT> <CPUs> <RAM_MB> <DISK_GB> <NUM_IFACES>"
+    echo "Ejemplo: $0 VM1 br-int 100 1 1 256 1 1"
     exit 1
 fi
 
@@ -48,23 +48,20 @@ if ! sudo ovs-vsctl br-exists $OVS_NAME; then
 fi
 
 
-# Crear interfaz TAP
-echo "Creando interfaz TAP: $TAP_INTERFACE"
-sudo ip tuntap add mode tap name $TAP_INTERFACE
+# ===========================================
+# Crear una o varias interfaces TAP
+# ===========================================
+NUM_IFACES=${8:-1}   # nuevo parámetro opcional, por defecto 1 interfaz
+echo "Número de interfaces a crear: $NUM_IFACES"
 
-if [ $? -eq 0 ]; then
-    echo "Interfaz TAP $TAP_INTERFACE creada"
-else
-    echo "Error al crear interfaz TAP"
-    exit 1
-fi
-
-# Levantar la interfaz TAP
-sudo ip link set dev $TAP_INTERFACE up
-
-# Conectar TAP al OvS con VLAN tag
-echo "Conectando $TAP_INTERFACE a $OVS_NAME con VLAN $VLAN_ID"
-sudo ovs-vsctl add-port $OVS_NAME $TAP_INTERFACE tag=$VLAN_ID
+for IF in $(seq 1 $NUM_IFACES); do
+    TAP_INTERFACE="${OVS_NAME}-${VM_NAME}-tap${IF}"
+    echo "→ Creando TAP ${TAP_INTERFACE}..."
+    ip tuntap add mode tap name $TAP_INTERFACE
+    ip link set dev $TAP_INTERFACE up
+    ovs-vsctl add-port $OVS_NAME $TAP_INTERFACE
+    echo "   TAP ${TAP_INTERFACE} creada y conectada (sin VLAN todavía)"
+done
 
 if [ $? -eq 0 ]; then
     echo "Interfaz conectada al OvS con VLAN tag $VLAN_ID"

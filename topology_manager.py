@@ -128,7 +128,8 @@ class TopologyManager:
             print("1) Simple - Lineal")
             print("2) Simple - Anillo")
             print("3) Simple - Árbol")
-            print("4) Compuesta")
+            print("4) Simple - Bus")
+            print("5) Compuesta")
 
             option = input("> ")
 

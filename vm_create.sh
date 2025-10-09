@@ -75,6 +75,7 @@ fi
 # Crear y ejecutar la VM con qemu-system-x86_64
 echo "Iniciando VM con QEMU..."
 
+## OJO: INVESTIGAR COMO IMPLEMENTAR LO DEL DISCO
 qemu-system-x86_64 \
     -enable-kvm \
     -vnc 0.0.0.0:"$VNC_PORT" \

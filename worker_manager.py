@@ -16,6 +16,8 @@ class WorkerManager:
         Crea N VMs con distribución round-robin en los workers
         """
         worker_names = list(self.workers.keys())
+        ## BUSCAR FORMA DE OPTIMIZACIÓN
+
         for i in range(num_vms):
             vm_id = i + 1
             w_name = worker_names[i % len(worker_names)]
@@ -86,8 +88,8 @@ class WorkerManager:
                 f"{vm_info['name']} creada en {w_name}, PID={vm_info['pid']}"
             )
             print(
-                f"   Acceso VNC local: vnc://127.0.0.1:{30010+vm_id}\n"
-                f"   ssh -NL :{30010+vm_id}:127.0.0.1:{5900+vnc_port} "
+                f"   Acceso VNC local: vnc://127.0.0.1:{30010 + vm_id}\n"
+                f"   ssh -NL :{30010 + vm_id}:127.0.0.1:{5900 + vnc_port} "
                 f"{self.ssh_user}@10.20.12.28 -p {wdata['ssh_port']}"
             )
 

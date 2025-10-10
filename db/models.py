@@ -70,3 +70,9 @@ class Image(db.Model):
     reference_count = db.Column(db.Integer)
 
     vms = db.relationship('VM', backref='image', lazy=True)
+#Inicializar tablas
+if __name__ == "__main__":
+    engine = create_engine(SQLALCHEMY_DATABASE_URI)
+    Base.metadata.create_all(engine)
+    print(" Tablas creadas correctamente en joyastack_db")
+    

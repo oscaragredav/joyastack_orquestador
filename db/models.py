@@ -1,6 +1,7 @@
+# db/models.py
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-Base = declarative_base()
+
 db = SQLAlchemy()
 
 class User(db.Model):
@@ -11,6 +12,7 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)
 
     slices = db.relationship('Slice', backref='owner', lazy=True)
+
 
 class Slice(db.Model):
     __tablename__ = 'slice'
@@ -23,6 +25,7 @@ class Slice(db.Model):
     vms = db.relationship('VM', backref='slice', lazy=True)
     network_links = db.relationship('NetworkLink', backref='slice', lazy=True)
 
+
 class VM(db.Model):
     __tablename__ = 'vm'
     id = db.Column(db.Integer, primary_key=True)
@@ -34,6 +37,7 @@ class VM(db.Model):
     state = db.Column(db.String(20))
     image_id = db.Column(db.Integer, db.ForeignKey('image.id'))
 
+
 class NetworkLink(db.Model):
     __tablename__ = 'network_link'
     id = db.Column(db.Integer, primary_key=True)
@@ -41,6 +45,7 @@ class NetworkLink(db.Model):
     vlan_id = db.Column(db.Integer)
     vm_a = db.Column(db.Integer, db.ForeignKey('vm.id'))
     vm_b = db.Column(db.Integer, db.ForeignKey('vm.id'))
+
 
 class Worker(db.Model):
     __tablename__ = 'worker'
@@ -52,6 +57,7 @@ class Worker(db.Model):
 
     vms = db.relationship('VM', backref='worker', lazy=True)
 
+
 class Logs(db.Model):
     __tablename__ = 'logs'
     id = db.Column(db.Integer, primary_key=True)
@@ -59,6 +65,7 @@ class Logs(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     message = db.Column(db.Text)
     level = db.Column(db.String(20))
+
 
 class Image(db.Model):
     __tablename__ = 'image'
@@ -70,9 +77,3 @@ class Image(db.Model):
     reference_count = db.Column(db.Integer)
 
     vms = db.relationship('VM', backref='image', lazy=True)
-#Inicializar tablas
-if __name__ == "__main__":
-    engine = create_engine(SQLALCHEMY_DATABASE_URI)
-    Base.metadata.create_all(engine)
-    print(" Tablas creadas correctamente en joyastack_db")
-    

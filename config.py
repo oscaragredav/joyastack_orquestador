@@ -1,0 +1,5 @@
+DB_USER = "joya_user"
+DB_PASSWORD = "joya123"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+DB_NAME = "joyastack_db"

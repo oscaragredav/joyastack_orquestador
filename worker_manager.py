@@ -16,8 +16,10 @@ class WorkerManager:
         Crea N VMs con distribución round-robin en los workers
         """
         worker_names = list(self.workers.keys())
-        ## BUSCAR FORMA DE OPTIMIZACIÓN
+        pending = []
+        results = []
 
+        ## recopilación de todos los datos de las vms al inicio
         for i in range(num_vms):
             vm_id = i + 1
             w_name = worker_names[i % len(worker_names)]
@@ -47,53 +49,73 @@ class WorkerManager:
                 "vnc_port": vnc_port,
                 "mac": f"20:19:37:33:ee:{mac_suffix}",  # OJO: acá la MAC empieza con mi código :V
             }
+            pending.append(vm_info)
 
-            ssh = SSHConnection(
-                self.gateway_ip, wdata["ssh_port"], self.ssh_user, self.ssh_pass
-            )
-            if not ssh.connect():
-                print(f"No se pudo conectar a {w_name}")
-                continue
+        #creación secuencial de las vms
+        for vm_info in pending:
+            w_name = vm_info["worker"]
+            wdata = self.workers[w_name]
 
-            sftp = ssh.client.open_sftp()
-            sftp.put("vm_create.sh", "/tmp/vm_create.sh")
-            sftp.chmod("/tmp/vm_create.sh", 0o755)
-            sftp.close()
+            try:
+                ssh = SSHConnection(
+                    self.gateway_ip, wdata["ssh_port"], self.ssh_user, self.ssh_pass
+                )
+                if not ssh.connect():
+                    print(f"No se pudo conectar a {w_name}")
+                    continue
 
-            # Número de interfaces para la VM (por ahora 1, se ampliará en topología)
-            num_ifaces = 1
-            cmd = (
-                f"/tmp/vm_create.sh {vm_info['name']} br-int 0 {vnc_port} "
-                f"{vm_info['cpus']} {vm_info['ram']} {vm_info['disk']} {num_ifaces}"
-            )
-            print(f"Ejecutando en {w_name}: {cmd}")
-            out, err = ssh.exec_sudo(cmd)
+                sftp = ssh.client.open_sftp()
+                sftp.put("vm_create.sh", "/tmp/vm_create.sh")
+                sftp.chmod("/tmp/vm_create.sh", 0o755)
+                sftp.close()
 
-            # if err:
-            #     print(f"Error creando VM en {w_name}: {err}")
+                # Número de interfaces para la VM (por ahora 1, se ampliará en topología)
+                num_ifaces = 1
+                cmd = (
+                    f"/tmp/vm_create.sh {vm_info['name']} br-int 0 {vnc_port} "
+                    f"{vm_info['cpus']} {vm_info['ram']} {vm_info['disk']} {num_ifaces}"
+                )
+                print(f"\nEjecutando {vm_info['name']} en {w_name}: {cmd}")
+                out, err = ssh.exec_sudo(cmd)
 
-            print("Output:", out, err)
+                # if err:
+                #     print(f"Error creando VM en {w_name}: {err}")
 
-            # Obtener el PID QEMU remoto
-            pid_cmd = f"pgrep -f 'qemu-system-x86_64.*-name {vm_info['name']}'"
-            out, err = ssh.exec_sudo(pid_cmd)
-            if out.strip():
-                vm_info["pid"] = out.strip()
+                print("Output:", out, err)
+
+                # Obtener el PID QEMU remoto
+                pid_cmd = f"pgrep -f 'qemu-system-x86_64.*-name {vm_info['name']}'"
+                out, err = ssh.exec_sudo(pid_cmd)
+                if out.strip():
+                    vm_info["pid"] = out.strip()
+                else:
+                    vm_info["pid"] = None
+
+                ssh.close()
+
+                print(
+                    f"{vm_info['name']} creada en {w_name}, PID={vm_info['pid']}"
+                )
+                print(
+                    f"   Acceso VNC local: vnc://127.0.0.1:{30010 + vm_id}\n"
+                    f"   ssh -NL :{30010 + vm_id}:127.0.0.1:{5900 + vnc_port} "
+                    f"{self.ssh_user}@10.20.12.28 -p {wdata['ssh_port']}"
+                )
+
+                self.vm_inventory.append(vm_info)   
+                results.append((vm_info, None))
+
+            except Exception as e:
+                print(f"Error creando VM en {w_name}: {e}")
+                results.append((vm_info, str(e)))
+        print()
+        print("------------------------------")
+        print("=== Resumen de creación de VMs ===")
+        for vm_info, error in results:
+            if error:
+                print(f"{vm_info['name']} en {vm_info['worker']}: ERROR - {error}")
             else:
-                vm_info["pid"] = None
-
-            ssh.close()
-
-            print(
-                f"{vm_info['name']} creada en {w_name}, PID={vm_info['pid']}"
-            )
-            print(
-                f"   Acceso VNC local: vnc://127.0.0.1:{30010 + vm_id}\n"
-                f"   ssh -NL :{30010 + vm_id}:127.0.0.1:{5900 + vnc_port} "
-                f"{self.ssh_user}@10.20.12.28 -p {wdata['ssh_port']}"
-            )
-
-            self.vm_inventory.append(vm_info)
+                print(f"{vm_info['name']} en {vm_info['worker']}: Creada correctamente")
 
     def list_vms(self):
         if not self.vm_inventory:

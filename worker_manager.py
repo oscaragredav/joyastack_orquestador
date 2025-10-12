@@ -160,11 +160,30 @@ class WorkerManager:
         
         print("\n=== VMs DESPLEGADAS ===")
         for vm in self.vm_inventory:
-            print(
-                f"• {vm['name']} en {vm['worker']} | "
-                f"CPUs={vm['cpus']} RAM={vm['ram']}MB DISK={vm['disk']}GB "
-                f"VNC-Port={vm['vnc_port']} PID={vm.get('pid', 'N/A')}"
+            wdata = self.workers[vm["worker"]] # Obtener datos del worker asociado
+            
+            # --- CÁLCULO DE PUERTOS DE ACCESO (Replica la lógica de create_vms) ---
+            vnc_local_port = 30010 + vm['vnc_port']
+            vnc_remote_port = 5900 + vm['vnc_port']
+            
+            ssh_access = (
+                f"ssh -NL :{vnc_local_port}:127.0.0.1:{vnc_remote_port} "
+                f"{self.ssh_user}@{self.gateway_ip} -p {wdata['ssh_port']}"
             )
+            vnc_access = f"vnc://127.0.0.1:{vnc_local_port}"
+            
+            # --- IMPRESIÓN DEL RESUMEN Y ACCESO ---
+            print("-" * 50)
+            print(
+                f"{vm['name']} en {vm['worker']} (PID={vm.get('pid', 'N/A')})"
+            )
+            print(
+                f"\tRecursos: CPUs={vm['cpus']}, RAM={vm['ram']}MB, DISK={vm['disk']}GB, VNC-Port={vm['vnc_port']}"
+            )
+            print(f"\tSSH Tunnel: {ssh_access}")
+            print(f"\tVNC: {vnc_access}")
+            
+        print("-" * 50)
         print()
 
     def delete_vm(self, vm_info):

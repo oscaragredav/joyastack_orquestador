@@ -93,14 +93,18 @@ if [ -n "$existing_pid" ]; then
     log "✅ Proceso anterior eliminado"
 fi
 
-# 4. Limpiar interfaz TAP si existe
+# 4. Limpiar interfaz TAP si existe (MEJORADO: limpiar en OvS primero)
+log "🧹 Limpiando recursos previos..."
+# IMPORTANTE: Primero eliminar del OvS, luego la interfaz
+ovs-vsctl --if-exists del-port "$OVS_NAME" "$TAP_INTERFACE" 2>/dev/null || true
+sleep 1  # Dar tiempo a OvS para procesar
+
 if ip link show "$TAP_INTERFACE" &>/dev/null; then
-    log "🧹 Limpiando interfaz TAP existente: $TAP_INTERFACE"
-    ovs-vsctl --if-exists del-port "$OVS_NAME" "$TAP_INTERFACE" 2>/dev/null || true
+    log "🧹 Eliminando interfaz TAP huérfana: $TAP_INTERFACE"
     ip link delete "$TAP_INTERFACE" 2>/dev/null || true
     sleep 1
-    log "✅ Interfaz TAP limpiada"
 fi
+log "✅ Limpieza completada"
 
 # 5. Verificar/Descargar imagen
 log "🔍 Verificando imagen CirrOS..."

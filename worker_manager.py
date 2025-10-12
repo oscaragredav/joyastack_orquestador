@@ -28,9 +28,16 @@ class WorkerManager:
 
             print()
             print(f"\nConfiguración de VM{vm_id} (asignada a {w_name})")
-            cpus = int(input("   CPUs: "))
-            ram = int(input("   RAM (MB): "))
-            disk = int(input("   Disco (GB): "))
+            print("   (Ingresa 0 para cancelar creación de VMs)")
+            cpus = self.get_validated_input("   CPUs: ")
+            if cpus == 0:
+                return
+            ram = self.get_validated_input("   RAM (MB): ")
+            if ram == 0:
+                return
+            disk = self.get_validated_input("   DISK (GB): ")
+            if disk == 0:
+                return
 
             vnc_port = vm_id
             mac_suffix = f"{random.randint(0, 255):02x}"
@@ -196,4 +203,19 @@ class WorkerManager:
         else:
             print("❌ Operación cancelada\n")
     
-    
+    def get_validated_input(self, prompt_text):
+        while True:
+            try:
+                user_input = input(prompt_text).strip()
+                
+                if not user_input or user_input == '0':
+                    return 0
+                value = int(user_input)
+                
+                if value > 0:
+                    return value
+                else:
+                    print("Error: El valor debe ser mayor que cero.")
+
+            except ValueError:
+                print("Error: Ingrese solo números enteros válidos.")

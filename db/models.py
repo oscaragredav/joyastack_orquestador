@@ -12,7 +12,7 @@ class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    hash_password = db.Column(db.String(128), nullable=False)
+    hash_password = db.Column(db.String(512), nullable=False)
     role = db.Column(db.String(20), nullable=False)
 
     slices = db.relationship('Slice', backref='owner', lazy=True)

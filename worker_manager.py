@@ -206,6 +206,12 @@ class WorkerManager:
             ssh.exec_sudo(f"ovs-vsctl --if-exists del-port br-int {vm_info['tap']}")
             ssh.exec_sudo(f"ip link delete {vm_info['tap']} 2>/dev/null || true")
             
+            # Borrar disco overlay (.qcow2)
+            # Asumimos que los discos están en /home/ubuntu y se llaman igual que la VM, por ejemplo VM2_overlay.qcow2
+            disk_name = f"/home/ubuntu/{vm_info['name']}_overlay.qcow2"
+            print(f"💾 Eliminando disco {disk_name}...")
+            ssh.exec_sudo(f"rm -f {disk_name}")
+
             print(f"✅ VM {vm_info['name']} eliminada en {vm_info['worker']}")
             ssh.close()
         else:

@@ -12,6 +12,8 @@
 #  $7 = Disco GB
 #  $8 = NUM_IFACES (número de interfaces TAP)
 
+START_TIME=$(date +%s)
+
 # Auto-fix CRLF si existe (DEBE SER LO PRIMERO)
 if grep -q $'\r' "$0" 2>/dev/null; then
   sed -i 's/\r$//' "$0"
@@ -121,6 +123,20 @@ else
     log "✅ Imagen encontrada: ${IMAGE_DIR}/${CIRROS_IMAGE}"
 fi
 
+# 5.1 Crear disco overlay para la VM
+OVERLAY_DISK="${IMAGE_DIR}/${VM_NAME}_overlay.qcow2"
+
+log "🔧 Creando disco overlay para la VM..."
+if [ -f "$OVERLAY_DISK" ]; then
+    log "⚠️  Disco overlay existente encontrado, reutilizando: $OVERLAY_DISK"
+else
+    if ! qemu-img create -f qcow2 -b "${IMAGE_DIR}/${CIRROS_IMAGE}" "$OVERLAY_DISK" "${DISK}G" >/dev/null 2>&1; then
+    error_exit "No se pudo crear el disco overlay para la VM"
+    fi
+    log "✅ Disco overlay creado: $OVERLAY_DISK"
+fi
+
+
 # 6. Crear interfaz TAP
 log "🔧 Creando interfaz TAP: $TAP_INTERFACE"
 if ! ip tuntap add mode tap name "$TAP_INTERFACE" 2>&1; then
@@ -168,7 +184,7 @@ QEMU_CMD="qemu-system-x86_64 \
     -name $VM_NAME \
     -smp $CPUS \
     -m $RAM \
-    ${IMAGE_DIR}/${CIRROS_IMAGE}"
+    -drive file=$OVERLAY_DISK,if=virtio,format=qcow2"
 
 # Ejecutar QEMU y capturar salida
 if ! $QEMU_CMD 2>&1; then
@@ -217,8 +233,12 @@ RAM=$RAM
 CPUS=$CPUS
 DISK=$DISK
 CREATED=$(date '+%Y-%m-%d %H:%M:%S')
-IMAGE=${IMAGE_DIR}/${CIRROS_IMAGE}
+IMAGE_BASE=${IMAGE_DIR}/${CIRROS_IMAGE}
+OVERLAY_DISK=$OVERLAY_DISK
 EOF
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
 
 # 14. Mostrar resumen de éxito
 HOST_IP=$(hostname -I | awk '{print $1}')
@@ -247,6 +267,7 @@ log "   Ver en OvS: ovs-vsctl show"
 log "========================================="
 log "✅ Info guardada en: $INFO_FILE"
 log "========================================="
+log "⏱️ Tiempo total de creación: ${ELAPSED} segundos"
 echo ""
 
 # Retornar éxito explícito

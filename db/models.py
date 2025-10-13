@@ -1,9 +1,12 @@
-# db/models.py
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from sqlalchemy import create_engine
+from config import SQLALCHEMY_DATABASE_URI 
 
+# Inicializa el ORM
 db = SQLAlchemy()
-Base = declarative_base()
+
+# === MODELOS ===
 
 class User(db.Model):
     __tablename__ = 'user'
@@ -79,6 +82,10 @@ class Image(db.Model):
 
     vms = db.relationship('VM', backref='image', lazy=True)
 
+
+# === CREACIÓN DE TABLAS ===
 if __name__ == "__main__":
-    Base.metadata.create_all(engine)
-    print("✅ Tablas creadas correctamente en joyastack_db")
+    engine = create_engine(SQLALCHEMY_DATABASE_URI)
+    db.metadata.create_all(engine)
+    print("Tablas creadas correctamente en joyastack_db")
+

@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from sqlalchemy import create_engine
-from config import SQLALCHEMY_DATABASE_URI 
+from db.config import SQLALCHEMY_DATABASE_URI 
 
 # Inicializa el ORM
 db = SQLAlchemy()

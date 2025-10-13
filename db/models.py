@@ -12,7 +12,7 @@ class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    hash_password = db.Column(db.String(128), nullable=False)
+    hash_password = db.Column(db.Text, nullable=False)  
     role = db.Column(db.String(20), nullable=False)
 
     slices = db.relationship('Slice', backref='owner', lazy=True)
@@ -83,9 +83,16 @@ class Image(db.Model):
     vms = db.relationship('VM', backref='image', lazy=True)
 
 
-# === CREACIÓN DE TABLAS ===
+# === CREACIÓN / REINICIO DE TABLAS ===
 if __name__ == "__main__":
     engine = create_engine(SQLALCHEMY_DATABASE_URI)
+
+    # ⚠️ BORRAR TODAS LAS TABLAS EXISTENTES
+    db.metadata.drop_all(engine)
+    print("🗑️ Todas las tablas existentes han sido eliminadas.")
+
+    # CREAR TODAS LAS TABLAS NUEVAS
     db.metadata.create_all(engine)
-    print("Tablas creadas correctamente en joyastack_db")
+    print("✅ Todas las tablas han sido creadas correctamente en joyastack_db")
+
 
